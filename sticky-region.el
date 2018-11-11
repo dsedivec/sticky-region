@@ -57,7 +57,7 @@
         ((eq this-command 'keyboard-quit)
          (setq sticky-region--active nil)
          (message "Sticky region deactivated"))
-        (t
+        (sticky-region--current-region
          (sticky-region--restore-current-region)
          (setq deactivate-mark nil
                region-is-gone nil))))
