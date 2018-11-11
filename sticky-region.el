@@ -49,19 +49,72 @@
       (set-marker (cdr sticky-region--current-region) (point)))))
 
 (defun sticky-region--post-command-hook ()
-  (let ((region-is-gone (or deactivate-mark
-                            ;; Maybe someone already deactivated it
-                            (not (use-region-p)))))
-    (when (and sticky-region--active region-is-gone)
-      (cond
-        ((eq this-command 'keyboard-quit)
-         (setq sticky-region--active nil)
-         (message "Sticky region deactivated"))
-        (sticky-region--current-region
-         (sticky-region--restore-current-region)
-         (setq deactivate-mark nil
-               region-is-gone nil))))
-    (when (and region-is-gone sticky-region--current-region)
+  (let* ((region-inactive (or deactivate-mark
+                              ;; Check if someone already deactivated
+                              ;; the region.
+                              ;;
+                              ;; Force Emacs to consider an empty
+                              ;; region active.  This prevents a weird
+                              ;; case where you've activated sticky
+                              ;; region and you're moving the cursor
+                              ;; in such a way that the region becomes
+                              ;; empty, which causes sticky regions to
+                              ;; fight you by restoring the region
+                              ;; (including point) every time you try
+                              ;; to move point onto the mark.
+                              (let ((use-empty-active-region t))
+                                (not (use-region-p)))))
+         (deactivate (and
+                      ;; We're active.  Should we deactivate?
+                      sticky-region--active
+                      (or
+                       ;; Deactivate if multiple-cursors just got
+                       ;; activated.
+                       (bound-and-true-p multiple-cursors-mode)
+                       ;; C-g deactivates sticky mark.
+                       (eq this-command 'keyboard-quit)
+                       ;; Deactivate if our stored region has been
+                       ;; zeroed out.  This is possible because we
+                       ;; save the region as markers, so in the case
+                       ;; of something like `delete-selection-mode',
+                       ;; we may suddenly find that the region we
+                       ;; saved is empty.
+                       (and region-inactive
+                            ;; Special case:
+                            ;; `sticky-region-pop-region' won't
+                            ;; deactivate sticky regions.
+                            (not (eq this-command 'sticky-region-pop-region))
+                            sticky-region--current-region
+                            (sticky-region--current-region-empty-p)))))
+         (restore (and
+                   ;; We've been asked to make the region sticky.
+                   (not deactivate)
+                   sticky-region--active
+                   ;; The region isn't active now.
+                   region-inactive
+                   ;; We have a region we could restore.
+                   sticky-region--current-region))
+         (save (and
+                ;; We'll never both restore and save a region to
+                ;; history at the same time.
+                (not restore)
+                ;; Region is gone.
+                region-inactive
+                ;; We have a saved region that we could save to
+                ;; history.  At one point I was also considering not
+                ;; putting an empty saved region into history (see
+                ;; `sticky-region--current-region-empty-p').  However,
+                ;; I'm thinking that it may nonetheless be useful to
+                ;; save a region in the case of undos?  I honestly
+                ;; don't know how that works.
+                sticky-region--current-region)))
+    (when deactivate
+      (setq sticky-region--active nil)
+      (message "Sticky region deactivated"))
+    (when restore
+      (sticky-region--restore-current-region)
+      (setq deactivate-mark nil))
+    (when save
       (unless sticky-region--region-history
         ;; First time we're using the ring in this buffer, initialize
         ;; it.
@@ -69,6 +122,10 @@
               (make-ring sticky-region-region-history-size)))
       (ring-insert sticky-region--region-history sticky-region--current-region)
       (setq sticky-region--current-region nil))))
+
+(defun sticky-region--current-region-empty-p ()
+  (zerop (- (car sticky-region--current-region)
+            (cdr sticky-region--current-region))))
 
 (defun sticky-region--restore-current-region ()
   (push-mark (car sticky-region--current-region) t t)
@@ -98,6 +155,8 @@ from history unconditionally, overwriting any current region."
   (interactive "P")
   (unless sticky-region-mode
     (error "`sticky-region-mode' is not on"))
+  (when multiple-cursors-mode
+    (error "Sticky regions don't work with multiple-cursors"))
   (setq sticky-region--active t
         pop-region (or pop-region (not (use-region-p))))
   (when pop-region
