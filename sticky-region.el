@@ -124,6 +124,7 @@ from history unconditionally, overwriting any current region."
     (define-key keymap (kbd "C-x C-z") 'sticky-region-activate)
     keymap))
 
+;;;###autoload
 (define-minor-mode
     sticky-region-mode
     "Preserve region through multiple commands.
