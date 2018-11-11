@@ -28,7 +28,7 @@
 
 ;;; Code:
 
-(defvar sticky-region-region-history-size 20
+(defvar sticky-region-history-size 20
   "Number of previous regions stored in each buffer's history.")
 
 (defvar-local sticky-region--region-history nil
@@ -119,7 +119,7 @@
         ;; First time we're using the ring in this buffer, initialize
         ;; it.
         (setq sticky-region--region-history
-              (make-ring sticky-region-region-history-size)))
+              (make-ring sticky-region-history-size)))
       (ring-insert sticky-region--region-history sticky-region--current-region)
       (setq sticky-region--current-region nil))))
 
