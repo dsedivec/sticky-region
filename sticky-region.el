@@ -4,6 +4,9 @@
 
 ;; Author: Dale Sedivec <dale@codefu.org>
 ;; Keywords: convenience
+;; Version: 1.0
+;; Package-Requires: ((emacs "24.3"))
+;; Homepage: https://github.com/dsedivec/sticky-region
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -43,6 +46,7 @@
   "If true, region will be reactivated in `post-command-hook' if necessary.")
 
 (defun sticky-region--pre-command-hook ()
+  "Save the active region, if any, in `sticky-region--current-region'."
   (when (use-region-p)
     (if (not sticky-region--current-region)
         (setq sticky-region--current-region (cons (copy-marker (mark-marker))
@@ -51,6 +55,7 @@
       (set-marker (cdr sticky-region--current-region) (point)))))
 
 (defun sticky-region--post-command-hook ()
+  "Restore and/or record the region, or maybe deactivate stick regions."
   (let* ((region-inactive (or deactivate-mark
                               ;; Check if someone already deactivated
                               ;; the region.
@@ -126,10 +131,15 @@
       (setq sticky-region--current-region nil))))
 
 (defun sticky-region--current-region-empty-p ()
+  "Is the region saved in `sticky-region--current-region' now empty?
+characters long?  This is possible because we save the region
+using two markers.  If changes to the buffer bring the two
+together, the region is now empty."
   (zerop (- (car sticky-region--current-region)
             (cdr sticky-region--current-region))))
 
 (defun sticky-region--restore-current-region ()
+  "Restore the region saved in `sticky-region--current-region'."
   (push-mark (car sticky-region--current-region) t t)
   (goto-char (cdr sticky-region--current-region)))
 
@@ -152,7 +162,7 @@ NOERROR is true."
   "Activate sticky region mode, and possibly the region as well.
 If no region is active then the last region from history is
 activated, if any.  If called with a prefix arg, or if called
-from lisp with POP-REGION true, the next region will be popped
+from Lisp with POP-REGION true, the next region will be popped
 from history unconditionally, overwriting any current region."
   (interactive "P")
   (unless sticky-region-mode
