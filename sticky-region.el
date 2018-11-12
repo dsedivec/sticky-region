@@ -28,6 +28,8 @@
 
 ;;; Code:
 
+(require 'ring)
+
 (defvar sticky-region-history-size 20
   "Number of previous regions stored in each buffer's history.")
 
