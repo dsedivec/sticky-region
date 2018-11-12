@@ -157,7 +157,7 @@ from history unconditionally, overwriting any current region."
   (interactive "P")
   (unless sticky-region-mode
     (error "`sticky-region-mode' is not on"))
-  (when multiple-cursors-mode
+  (when (bound-and-true-p multiple-cursors-mode)
     (error "Sticky regions don't work with multiple-cursors"))
   (setq sticky-region--active t
         pop-region (or pop-region (not (use-region-p))))
