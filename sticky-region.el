@@ -33,8 +33,13 @@
 
 (require 'ring)
 
-(defvar sticky-region-history-size 20
-  "Number of previous regions stored in each buffer's history.")
+(defgroup sticky-region nil
+  "Configuration for sticky-region.el."
+  :group 'convenience)
+
+(defcustom sticky-region-history-size 20
+  "Number of previous regions stored in each buffer's history."
+  :type 'integer)
 
 (defvar-local sticky-region--region-history nil
   "Ring of (mark . point) markers.")
